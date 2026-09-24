@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-platform entry point for reproducing this election dataset."""
+"""Cross-platform entry point for a full raw and structured download."""
 
 from __future__ import annotations
 
@@ -15,8 +15,7 @@ if __name__ == "__main__":
         "--election-id", "587813923",
         "--from-date", "2026-09-18",
         "--to-date", "2026-09-20",
-        "--stages", "reports,candidates",
-        "--no-files",
+        "--stages", "all",
         "--workers", "1",
         "--commission-workers", "16",
         "--delay", "0.04",
