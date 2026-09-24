@@ -225,6 +225,10 @@ class Client:
                     raise ExpectedUnavailable(f"HTTP {error.code}: {url}") from error
                 if error.code not in (408, 425, 429, 500, 502, 503, 504) or attempt == 6:
                     raise
+                print(
+                    f"[СЕТЬ] HTTP {error.code}; повтор {attempt + 1}/6: {url}",
+                    flush=True,
+                )
                 if error.code == 429:
                     with self.stats_lock:
                         self.stats['http429'] += 1
@@ -237,9 +241,14 @@ class Client:
                         except (ValueError, TypeError, OverflowError):
                             seconds = min(60.0, 2.0 ** (attempt + 1))
                     self.rate.cooldown(max(1.0, seconds))
-            except (urllib.error.URLError, ConnectionError, TimeoutError, OSError, http.client.HTTPException):
+            except (urllib.error.URLError, ConnectionError, TimeoutError, OSError, http.client.HTTPException) as error:
                 if attempt == 6:
                     raise
+                print(
+                    f"[СЕТЬ] {type(error).__name__}: {error}; "
+                    f"повтор {attempt + 1}/6: {url}",
+                    flush=True,
+                )
             time.sleep(min(20.0, 0.8 * (2**attempt)))
         raise RuntimeError("request retry loop exhausted")
 
@@ -247,6 +256,7 @@ class Client:
         last_error: Exception | None = None
         for base in (API, REFERENCE):
             try:
+                print(f"[СТАРТ] Получаю ключ доступа: {base}", flush=True)
                 challenge = self._open(
                     f"{base}/challenge/get", authenticated=False, accept_json=True
                 )
@@ -1177,6 +1187,11 @@ class FullCrawler:
             self.log(f"  ОШИБКА {eid}: {error!r}")
 
     def run(self) -> None:
+        self.log(
+            f"[СТАРТ] Проверяю каталог выборов {self.args.from_date} — "
+            f"{self.args.to_date}. Ожидание одного HTTP-ответа: "
+            f"до {self.args.timeout} с; при сбое будут повторы."
+        )
         records = self.catalog()
         self.total_records = len(records)
         self.log(f"Выборов в текущем запуске: {len(records)}")
